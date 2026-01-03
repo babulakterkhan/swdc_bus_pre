@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Student Marksheet Print</title>
+<style>
+    body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f0f2f5; padding: 20px; margin: 0; }
+    
+    /* সার্চ কন্ট্রোল বক্স */
+    .controls { max-width: 500px; margin: 0 auto 20px; text-align: center; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    input { padding: 10px; width: 150px; border: 1px solid #ccc; border-radius: 4px; outline: none; }
+    button { padding: 10px 15px; cursor: pointer; background: #0d6efd; color: #fff; border: none; border-radius: 4px; font-weight: bold; margin-left: 5px; }
+    
+    /* মার্কশিট ডিজাইন - উইডথ আপনার পছন্দমতো ৬৫০ পিক্সেল রাখা হয়েছে */
+    .marksheet { 
+        max-width: 650px; 
+        margin: 0 auto; 
+        background: #fff; 
+        padding: 30px; 
+        border: 2px solid #0d6efd; 
+        display: none; 
+        box-sizing: border-box; /* উইডথ ঠিক রাখার জন্য */
+    }
+    
+    .header { text-align: center; border-bottom: 2px solid #0d6efd; margin-bottom: 20px; padding-bottom: 10px; }
+    .header h2 { margin: 0; color: #0d6efd; font-size: 24px; text-transform: uppercase; }
+    .header p { margin: 5px 0; font-size: 14px; font-weight: bold; }
+
+    .info { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; font-size: 14px; }
+    .info div { background: #f9f9f9; padding: 8px; border: 1px solid #eee; }
+
+    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    th { background: #0d6efd; color: #fff; padding: 8px; font-size: 13px; border: 1px solid #0d6efd; }
+    td { border: 1px solid #ddd; padding: 8px; text-align: center; font-size: 13px; }
+    .bold-text { font-weight: bold; }
+
+    .summary { display: flex; justify-content: space-between; gap: 10px; }
+    .summary div { flex: 1; border: 1px solid #0d6efd; padding: 10px; text-align: center; }
+    .summary h4 { margin: 0; font-size: 12px; color: #333; }
+    .summary p { margin: 5px 0 0; font-size: 18px; font-weight: bold; color: #000; }
+
+    .footer { display: flex; justify-content: space-between; margin-top: 60px; }
+    .footer span { border-top: 1px solid #000; padding-top: 5px; width: 120px; text-align: center; font-size: 12px; font-weight: bold; }
+
+    /* প্রিন্ট সেটিংস */
+    @media print {
+        @page { size: auto; margin: 10mm; }
+        body { background: #fff; padding: 0; }
+        .controls, .print-btn-hidden { display: none !important; }
+        .marksheet { 
+            display: block !important; 
+            border: 2px solid #000; 
+            width: 100%; 
+            max-width: 100%;
+            margin: 0;
+            padding: 20px;
+        }
+        th { background: #f0f0f0 !important; color: #000 !important; border: 1px solid #000; }
+        td { border: 1px solid #000; }
+        .summary div { border: 1px solid #000; }
+        .header h2 { color: #000; }
+    }
+</style>
+</head>
+<body>
+<div id="login-screen" style="position:fixed; top:0; left:0; width:100%; height:100%; background:white; z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+  <h3>অনুগ্রহ করে পাসওয়ার্ড দিন</h3>
+  <input type="password" id="pass-input" style="padding:10px; margin-bottom:10px; border-radius:5px; border:1px solid #ccc;">
+  <button onclick="checkPass()" style="padding:10px 20px; cursor:pointer; background:#28a745; color:white; border:none; border-radius:5px;">Login</button>
+  <p id="error-msg" style="color:red; display:none;">ভুল পাসওয়ার্ড!</p>
+</div>
+
+<script>
+function checkPass() {
+  const input = document.getElementById('pass-input').value;
+  const correctPass = "12345678"; // আপনার পাসওয়ার্ড এখানে লিখুন
+  
+  if (input === correctPass) {
+    document.getElementById('login-screen').style.display = 'none';
+  } else {
+    document.getElementById('error-msg').style.display = 'block';
+  }
+}
+</script>
+<div class="controls">
+    <h3>Result Search</h3>
+    <input id="rollInput" type="number" placeholder="Enter Roll">
+    <button onclick="search()">Search</button>
+</div>
+
+<div id="marksheetBox" class="marksheet">
+    <div style="text-align: right; margin-bottom: 10px;">
+        <button class="print-btn-hidden" onclick="window.print()" style="background: #198754; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer;">Print Marksheet</button>
+    </div>
+
+    <div class="header">
+         <h2>SHAHZADPUR WOMEN'S DEGREE COLLEGE</h2>
+        <p>BUSINESS GROUP - PRE-TEST EXAM-2025</p>
+	<p>Academic Transcript</p>
+    </div>
+
+    <div class="info">
+        <div><b>Name:</b> <span id="sName"></span></div>
+        <div><b>Roll:</b> <span id="sRoll"></span></div>
+        <div><b>Group:</b> Business Studies</div>
+        <div><b>Status:</b> <span id="sStatus"></span></div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Subject</th>
+                <th>MCQ</th>
+                <th>CQ</th>
+                <th>Prac</th>
+                <th>Total</th>
+                <th>GP</th>
+                <th>Grade</th>
+            </tr>
+        </thead>
+        <tbody id="subjectBody"></tbody>
+    </table>
+
+    <div class="summary">
+        <div><h4>Total Marks</h4><p id="sTotal"></p></div>
+        <div><h4>GPA</h4><p id="sGPA"></p></div>
+        <div><h4>Failed Sub</h4><p id="sFail"></p></div>
+    </div>
+
+    <div class="footer">
+        <span>Guide Teacher</span>
+        <span>Principal</span>
+    </div>
+</div>
+
+<script>
+    const studentData = [
+        
+  {
+    "name": "MST. FAHIMA JANNAT",
+    "roll": "7",
+    "total_score": "343",
+    "gpa": "F (0.0)",
+    "failed_count": 1,
+    "subjects": [
+      {"c": "102", "n": "Bangla 2nd", "m": "", "cq": "45", "p": "", "t": "45", "gp": "2", "g": "C"},
+      {"c": "108", "n": "English 2nd", "m": "", "cq": "23", "p": "", "t": "23", "gp": "0", "g": "F"},
+      {"c": "275", "n": "ICT", "m": "13", "cq": "24", "p": "20", "t": "57", "gp": "3", "g": "B"},
+      {"c": "254", "n": "Accounting 2nd", "m": "24", "cq": "35", "p": "", "t": "59", "gp": "3", "g": "B"},
+      {"c": "278", "n": "Business Organization and Management 2nd", "m": "17", "cq": "44", "p": "", "t": "61", "gp": "3.5", "g": "A-"},
+      {"c": "287", "n": "Production Management and Marketing 2nd", "m": "17", "cq": "44", "p": "", "t": "61", "gp": "3.5", "g": "A-"},
+      {"c": "274", "n": "Home Science 2nd", "m": "5", "cq": "12", "p": "20", "t": "37", "gp": "0", "g": "F"}
+    ]
+  },
+  {
+    "name": "MST. MYMUNA JANNAT",
+    "roll": "8",
+    "total_score": "333",
+    "gpa": "F (0.0)",
+    "failed_count": 1,
+    "subjects": [
+      {"c": "102", "n": "Bangla 2nd", "m": "", "cq": "43", "p": "", "t": "43", "gp": "2", "g": "C"},
+      {"c": "108", "n": "English 2nd", "m": "", "cq": "20", "p": "", "t": "20", "gp": "0", "g": "F"},
+      {"c": "275", "n": "ICT", "m": "13", "cq": "20", "p": "20", "t": "53", "gp": "3", "g": "B"},
+      {"c": "254", "n": "Accounting 2nd", "m": "20", "cq": "30", "p": "", "t": "50", "gp": "3", "g": "B"},
+      {"c": "278", "n": "Business Organization and Management 2nd", "m": "17", "cq": "45", "p": "", "t": "62", "gp": "3.5", "g": "A-"},
+      {"c": "287", "n": "Production Management and Marketing 2nd", "m": "17", "cq": "45", "p": "", "t": "62", "gp": "3.5", "g": "A-"},
+      {"c": "274", "n": "Home Science 2nd", "m": "7", "cq": "16", "p": "20", "t": "43", "gp": "0", "g": "F"}
+    ]
+  },
+  {
+    "name": "MST. FATEMA KHATUN",
+    "roll": "18",
+    "total_score": "291",
+    "gpa": "F (0.0)",
+    "failed_count": 3,
+    "subjects": [
+      {"c": "102", "n": "Bangla 2nd", "m": "", "cq": "56", "p": "", "t": "56", "gp": "3", "g": "B"},
+      {"c": "108", "n": "English 2nd", "m": "", "cq": "20", "p": "", "t": "20", "gp": "0", "g": "F"},
+      {"c": "275", "n": "ICT", "m": "13", "cq": "19", "p": "20", "t": "52", "gp": "3", "g": "B"},
+      {"c": "254", "n": "Accounting 2nd", "m": "19", "cq": "13", "p": "", "t": "32", "gp": "0", "g": "F"},
+      {"c": "278", "n": "Business Organization and Management 2nd", "m": "20", "cq": "24", "p": "", "t": "44", "gp": "2", "g": "C"},
+      {"c": "287", "n": "Production Management and Marketing 2nd", "m": "16", "cq": "23", "p": "", "t": "39", "gp": "0", "g": "F"},
+      {"c": "274", "n": "Home Science 2nd", "m": "10", "cq": "18", "p": "20", "t": "48", "gp": "2", "g": "C"}
+    ]
+  },
+  {
+    "name": "MST. SORNALY ARKE SUKHI",
+    "roll": "2",
+    "total_score": "238",
+    "gpa": "F (0.0)",
+    "failed_count": 4,
+    "subjects": [
+      {"c": "102", "n": "Bangla 2nd", "m": "", "cq": "33", "p": "", "t": "33", "gp": "1", "g": "D"},
+      {"c": "108", "n": "English 2nd", "m": "", "cq": "13", "p": "", "t": "13", "gp": "0", "g": "F"},
+      {"c": "275", "n": "ICT", "m": "11", "cq": "14", "p": "20", "t": "45", "gp": "0", "g": "F"},
+      {"c": "254", "n": "Accounting 2nd", "m": "27", "cq": "9", "p": "", "t": "36", "gp": "0", "g": "F"},
+      {"c": "278", "n": "Business Organization and Management 2nd", "m": "13", "cq": "10", "p": "", "t": "23", "gp": "0", "g": "F"},
+      {"c": "287", "n": "Production Management and Marketing 2nd", "m": "14", "cq": "35", "p": "", "t": "49", "gp": "2", "g": "C"},
+      {"c": "274", "n": "Home Science 2nd", "m": "3", "cq": "16", "p": "20", "t": "39", "gp": "0", "g": "F"}
+    ]
+  },
+  {
+    "name": "MST. TISA MONI",
+    "roll": "23",
+    "total_score": "215",
+    "gpa": "F (0.0)",
+    "failed_count": 5,
+    "subjects": [
+      {"c": "102", "n": "Bangla 2nd", "m": "", "cq": "50", "p": "", "t": "50", "gp": "3", "g": "B"},
+      {"c": "108", "n": "English 2nd", "m": "", "cq": "16", "p": "", "t": "16", "gp": "0", "g": "F"},
+      {"c": "275", "n": "ICT", "m": "11", "cq": "7", "p": "20", "t": "38", "gp": "0", "g": "F"},
+      {"c": "254", "n": "Accounting 2nd", "m": "13", "cq": "0", "p": "", "t": "13", "gp": "0", "g": "F"},
+      {"c": "278", "n": "Business Organization and Management 2nd", "m": "17", "cq": "12", "p": "", "t": "29", "gp": "0", "g": "F"},
+      {"c": "287", "n": "Production Management and Marketing 2nd", "m": "16", "cq": "11", "p": "", "t": "27", "gp": "0", "g": "F"},
+      {"c": "274", "n": "Home Science 2nd", "m": "7", "cq": "15", "p": "20", "t": "42", "gp": "0", "g": "F"}
+    ]
+  },
+  {
+    "name": "MST. ANTU KHATUN",
+    "roll": "10",
+    "total_score": "214",
+    "gpa": "F (0.0)",
+    "failed_count": 6,
+    "subjects": [
+      {"c": "102", "n": "Bangla 2nd", "m": "", "cq": "22", "p": "", "t": "22", "gp": "0", "g": "F"},
+      {"c": "108", "n": "English 2nd", "m": "", "cq": "21", "p": "", "t": "21", "gp": "0", "g": "F"},
+      {"c": "275", "n": "ICT", "m": "8", "cq": "9", "p": "20", "t": "37", "gp": "0", "g": "F"},
+      {"c": "254", "n": "Accounting 2nd", "m": "20", "cq": "18", "p": "", "t": "38", "gp": "0", "g": "F"},
+      {"c": "278", "n": "Business Organization and Management 2nd", "m": "12", "cq": "10", "p": "", "t": "22", "gp": "0", "g": "F"},
+      {"c": "287", "n": "Production Management and Marketing 2nd", "m": "14", "cq": "22", "p": "", "t": "36", "gp": "0", "g": "F"},
+      {"c": "274", "n": "Home Science 2nd", "m": "5", "cq": "13", "p": "20", "t": "38", "gp": "0", "g": "F"}
+    ]
+  },
+  {
+    "name": "MST. SHANAZ PARVIN",
+    "roll": "20",
+    "total_score": "165",
+    "gpa": "F (0.0)",
+    "failed_count": 6,
+    "subjects": [
+      {"c": "102", "n": "Bangla 2nd", "m": "", "cq": "17", "p": "", "t": "17", "gp": "0", "g": "F"},
+      {"c": "108", "n": "English 2nd", "m": "", "cq": "10", "p": "", "t": "10", "gp": "0", "g": "F"},
+      {"c": "275", "n": "ICT", "m": "10", "cq": "4", "p": "20", "t": "34", "gp": "0", "g": "F"},
+      {"c": "254", "n": "Accounting 2nd", "m": "10", "cq": "2", "p": "", "t": "12", "gp": "0", "g": "F"},
+      {"c": "278", "n": "Business Organization and Management 2nd", "m": "17", "cq": "12", "p": "", "t": "29", "gp": "0", "g": "F"},
+      {"c": "287", "n": "Production Management and Marketing 2nd", "m": "16", "cq": "11", "p": "", "t": "27", "gp": "0", "g": "F"},
+      {"c": "274", "n": "Home Science 2nd", "m": "5", "cq": "11", "p": "20", "t": "36", "gp": "0", "g": "F"}
+    ]
+  },
+  {
+    "name": "MST. MASUDA KHATUN",
+    "roll": "3",
+    "total_score": "140",
+    "gpa": "F (0.0)",
+    "failed_count": 5,
+    "subjects": [
+      {"c": "102", "n": "Bangla 2nd", "m": "", "cq": "36", "p": "", "t": "36", "gp": "1", "g": "D"},
+      {"c": "108", "n": "English 2nd", "m": "", "cq": "20", "p": "", "t": "20", "gp": "0", "g": "F"},
+      {"c": "275", "n": "ICT", "m": "10", "cq": "10", "p": "20", "t": "40", "gp": "0", "g": "F"},
+      {"c": "254", "n": "Accounting 2nd", "m": "11", "cq": "0", "p": "", "t": "11", "gp": "0", "g": "F"},
+      {"c": "278", "n": "Business Organization and Management 2nd", "m": "14", "cq": "7", "p": "", "t": "21", "gp": "0", "g": "F"},
+      {"c": "287", "n": "Production Management and Marketing 2nd", "m": "6", "cq": "6", "p": "", "t": "12", "gp": "0", "g": "F"},
+      {"c": "274", "n": "Home Science 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"}
+    ]
+  },
+  {
+    "name": "MANIA SIDAT CHAITY",
+    "roll": "1",
+    "total_score": "0",
+    "gpa": "F (0.0)",
+    "failed_count": 6,
+    "subjects": [
+      {"c": "102", "n": "Bangla 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "108", "n": "English 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "275", "n": "ICT", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "254", "n": "Accounting 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "278", "n": "Business Organization and Management 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "287", "n": "Production Management and Marketing 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "274", "n": "Home Science 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"}
+    ]
+  },
+  {
+    "name": "MST. BOYSHAKI KHATUN",
+    "roll": "12",
+    "total_score": "0",
+    "gpa": "F (0.0)",
+    "failed_count": 6,
+    "subjects": [
+      {"c": "102", "n": "Bangla 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "108", "n": "English 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "275", "n": "ICT", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "254", "n": "Accounting 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "278", "n": "Business Organization and Management 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "287", "n": "Production Management and Marketing 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "274", "n": "Home Science 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"}
+    ]
+  },
+
+  {
+    "name": "MST. RIMA KHATUN",
+    "roll": "13",
+    "total_score": "0",
+    "gpa": "F (0.0)",
+    "failed_count": 6,
+    "subjects": [
+      {"c": "102", "n": "Bangla 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "108", "n": "English 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "275", "n": "ICT", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "254", "n": "Accounting 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "278", "n": "Business Organization and Management 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "287", "n": "Production Management and Marketing 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "274", "n": "Home Science 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"}
+    ]
+  },
+  {
+    "name": "MST. JOTI KHATUN",
+    "roll": "14",
+    "total_score": "0",
+    "gpa": "F (0.0)",
+    "failed_count": 6,
+    "subjects": [
+      {"c": "102", "n": "Bangla 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "108", "n": "English 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "275", "n": "ICT", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "254", "n": "Accounting 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "278", "n": "Business Organization and Management 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "287", "n": "Production Management and Marketing 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "274", "n": "Home Science 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"}
+    ]
+  },
+  {
+    "name": "MST. MIM KHATUN",
+    "roll": "4",
+    "total_score": "0",
+    "gpa": "F (0.0)",
+    "failed_count": 6,
+    "subjects": [
+      {"c": "102", "n": "Bangla 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "108", "n": "English 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "275", "n": "ICT", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "254", "n": "Accounting 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "278", "n": "Business Organization and Management 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "287", "n": "Production Management and Marketing 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "274", "n": "Home Science 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"}
+    ]
+  },
+  {
+    "name": "MST. KULSUM KHATUN",
+    "roll": "15",
+    "total_score": "0",
+    "gpa": "F (0.0)",
+    "failed_count": 6,
+    "subjects": [
+      {"c": "102", "n": "Bangla 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "108", "n": "English 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "275", "n": "ICT", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "254", "n": "Accounting 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "278", "n": "Business Organization and Management 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "287", "n": "Production Management and Marketing 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "274", "n": "Home Science 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"}
+    ]
+  },
+  {
+    "name": "FARIYA YEASMIN JOYA",
+    "roll": "5",
+    "total_score": "0",
+    "gpa": "F (0.0)",
+    "failed_count": 6,
+    "subjects": [
+      {"c": "102", "n": "Bangla 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "108", "n": "English 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "275", "n": "ICT", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "254", "n": "Accounting 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "278", "n": "Business Organization and Management 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "287", "n": "Production Management and Marketing 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "274", "n": "Home Science 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"}
+    ]
+  },
+  {
+    "name": "MST. MUNNI KHATUN",
+    "roll": "16",
+    "total_score": "0",
+    "gpa": "F (0.0)",
+    "failed_count": 5,
+    "subjects": [
+      {"c": "102", "n": "Bangla 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "108", "n": "English 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "254", "n": "Accounting 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "278", "n": "Business Organization and Management 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "287", "n": "Production Management and Marketing 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "274", "n": "Home Science 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"}
+    ]
+  },
+  {
+    "name": "SHAPLA KHATUN",
+    "roll": "6",
+    "total_score": "0",
+    "gpa": "F (0.0)",
+    "failed_count": 6,
+    "subjects": [
+      {"c": "102", "n": "Bangla 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "108", "n": "English 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "275", "n": "ICT", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "254", "n": "Accounting 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "278", "n": "Business Organization and Management 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "287", "n": "Production Management and Marketing 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "274", "n": "Home Science 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"}
+    ]
+  },
+  {
+    "name": "MST. TANIA AKTHER TANJILA",
+    "roll": "17",
+    "total_score": "0",
+    "gpa": "F (0.0)",
+    "failed_count": 6,
+    "subjects": [
+      {"c": "102", "n": "Bangla 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "108", "n": "English 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "275", "n": "ICT", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "254", "n": "Accounting 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "278", "n": "Business Organization and Management 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "287", "n": "Production Management and Marketing 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "274", "n": "Home Science 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"}
+    ]
+  },
+  {
+    "name": "HUMAIRA AFRIN MIM",
+    "roll": "9",
+    "total_score": "0",
+    "gpa": "F (0.0)",
+    "failed_count": 6,
+    "subjects": [
+      {"c": "102", "n": "Bangla 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "108", "n": "English 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "275", "n": "ICT", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "254", "n": "Accounting 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "278", "n": "Business Organization and Management 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "287", "n": "Production Management and Marketing 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "274", "n": "Home Science 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"}
+    ]
+  },
+  {
+    "name": "MST. JANNATUL NAIMA TISHA",
+    "roll": "19",
+    "total_score": "0",
+    "gpa": "F (0.0)",
+    "failed_count": 6,
+    "subjects": [
+      {"c": "102", "n": "Bangla 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "108", "n": "English 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "275", "n": "ICT", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "254", "n": "Accounting 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "278", "n": "Business Organization and Management 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "287", "n": "Production Management and Marketing 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "274", "n": "Home Science 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"}
+    ]
+  },
+
+  {
+    "name": "ADHORI RANI SUTRADHAR",
+    "roll": "11",
+    "total_score": "0",
+    "gpa": "F (0.0)",
+    "failed_count": 6,
+    "subjects": [
+      {"c": "102", "n": "Bangla 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "108", "n": "English 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "275", "n": "ICT", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "254", "n": "Accounting 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "278", "n": "Business Organization and Management 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "287", "n": "Production Management and Marketing 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "274", "n": "Home Science 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"}
+    ]
+  },
+  {
+    "name": "MST. OKIA KHATUN",
+    "roll": "21",
+    "total_score": "0",
+    "gpa": "F (0.0)",
+    "failed_count": 6,
+    "subjects": [
+      {"c": "102", "n": "Bangla 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "108", "n": "English 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "275", "n": "ICT", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "254", "n": "Accounting 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "278", "n": "Business Organization and Management 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "287", "n": "Production Management and Marketing 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "274", "n": "Home Science 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"}
+    ]
+  },
+  {
+    "name": "ROKAIYA KHATUN",
+    "roll": "22",
+    "total_score": "0",
+    "gpa": "F (0.0)",
+    "failed_count": 6,
+    "subjects": [
+      {"c": "102", "n": "Bangla 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "108", "n": "English 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "275", "n": "ICT", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "254", "n": "Accounting 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "278", "n": "Business Organization and Management 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "287", "n": "Production Management and Marketing 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"c": "274", "n": "Home Science 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"}
+    ]
+  }
+    ];
+
+    function search() {
+        const roll = document.getElementById('rollInput').value;
+        const student = studentData.find(s => s.roll === roll);
+        const marksheet = document.getElementById('marksheetBox');
+
+        if (student) {
+            marksheet.style.display = "block";
+            document.getElementById('sName').innerText = student.name;
+            document.getElementById('sRoll').innerText = student.roll;
+            document.getElementById('sStatus').innerText = student.failed_count === 0 ? "PASSED" : "FAILED (" + student.failed_count + ")";
+            document.getElementById('sStatus').style.color = student.failed_count === 0 ? "green" : "red";
+            
+            const tbody = document.getElementById('subjectBody');
+            tbody.innerHTML = "";
+            student.subjects.forEach(sub => {
+                tbody.innerHTML += `<tr>
+                    <td style="text-align:left">${sub.n}</td>
+                    <td>${sub.m || '-'}</td>
+                    <td>${sub.cq || '-'}</td>
+                    <td>${sub.p || '-'}</td>
+                    <td class="bold-text">${sub.t}</td>
+                    <td>${sub.gp}</td>
+                    <td class="bold-text" style="color:${sub.g === 'F' ? 'red' : 'black'}">${sub.g}</td>
+                </tr>`;
+            });
+
+            document.getElementById('sTotal').innerText = student.total_score;
+            document.getElementById('sGPA').innerText = student.gpa;
+            document.getElementById('sFail').innerText = student.failed_count;
+        } else {
+            alert("Roll number not found!");
+            marksheet.style.display = "none";
+        }
+    }
+</script>
+</body>
+</html>
